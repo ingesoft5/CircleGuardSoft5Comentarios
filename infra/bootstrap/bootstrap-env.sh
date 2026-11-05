@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# != 1 ]]; then
-  echo "Uso: AWS_REGION=... EC2_KEY_NAME=... EC2_AMI_ID=... SSH_CIDR=... WEB_CIDR=... $0 <dev|stage|prod>" >&2
+  echo "Uso: AWS_REGION=... EC2_KEY_NAME=... EC2_AMI_ID=... SSH_CIDR=... WEB_CIDR=... $0 <dev|stage|prod|ci>" >&2
   exit 2
 fi
 
@@ -11,6 +11,7 @@ case "$environment" in
   dev) network_number=10 ;;
   stage) network_number=20 ;;
   prod) network_number=30 ;;
+  ci) network_number=40 ;;
   *) echo "Ambiente inválido: $environment" >&2; exit 2 ;;
 esac
 

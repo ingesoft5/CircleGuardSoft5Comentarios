@@ -155,6 +155,10 @@ The [Sprint 1 runbook](docs/sprint-1-persona-a.md) covers versioned releases, AW
 EC2 bootstrap for dev/stage/prod, and the Playwright gate in Jenkins. It also
 shows how to obtain the three environment hostnames after provisioning.
 
+The [CI and image packaging runbook](docs/sprint-1-persona-b.md) covers the
+Jenkins, SonarQube and Nexus stack and the build and publication of the nine
+application images.
+
 ---
 
 ## Privacy & Compliance
