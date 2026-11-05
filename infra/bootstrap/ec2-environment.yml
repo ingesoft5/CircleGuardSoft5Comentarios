@@ -3,10 +3,10 @@ Description: Isolated CircleGuard environment with Docker on EC2
 Parameters:
   Environment:
     Type: String
-    AllowedValues: [dev, stage, prod]
+    AllowedValues: [dev, stage, prod, ci]
   NetworkNumber:
     Type: Number
-    AllowedValues: [10, 20, 30]
+    AllowedValues: [10, 20, 30, 40]
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
   SshCidr:
