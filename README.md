@@ -149,6 +149,12 @@ We maintain high system integrity via multi-level testing:
 
 **Note**: Integration tests use **Testcontainers** to spawn ephemeral Neo4j and PostgreSQL instances for zero-side-effect validation.
 
+## Sprint 1
+
+The [Sprint 1 runbook](docs/sprint-1-persona-a.md) covers versioned releases, AWS
+EC2 bootstrap for dev/stage/prod, and the Playwright gate in Jenkins. It also
+shows how to obtain the three environment hostnames after provisioning.
+
 ---
 
 ## Privacy & Compliance
