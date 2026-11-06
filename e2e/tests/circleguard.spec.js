@@ -93,7 +93,7 @@ test('enviar una respuesta del cuestionario muestra confirmación', async ({ pag
   await expect(page.getByRole('link', { name: 'REPORT', exact: true })).toBeVisible();
 });
 
-test('gateway devuelve GREEN para ACTIVE y RED para SUSPECT', async ({ request }) => {
+async function verifyQr(request, healthStatus, status, valid) {
   const login = await request.post(endpoint('E2E_AUTH_URL', '/api/v1/auth/login'), {
     data: { username: required('E2E_HEALTH_USERNAME'), password: required('E2E_HEALTH_PASSWORD') },
   });
@@ -117,20 +117,22 @@ test('gateway devuelve GREEN para ACTIVE y RED para SUSPECT', async ({ request }
     const [previous, ttl] = await redis.multi().get(key).pTTL(key).exec();
     const expiresAt = Date.now() + ttl;
     try {
-      for (const [healthStatus, status, valid] of [['ACTIVE', 'GREEN', true], ['SUSPECT', 'RED', false]]) {
-        await redis.set(key, healthStatus, { expiration: { type: 'EX', value: 60 } });
-        const qr = await request.get(endpoint('E2E_AUTH_URL', '/api/v1/auth/qr/generate'), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        expect(qr.status(), 'Auth emitió un QR de acceso').toBe(200);
-        const { qrToken } = await qr.json();
-        const validation = await request.post(endpoint('E2E_GATEWAY_URL', '/api/v1/gate/validate'), {
-          data: { token: qrToken },
-        });
-        expect(validation.status()).toBe(200);
-        const result = await validation.json();
-        expect({ valid: result.valid, status: result.status }, `Validación para ${healthStatus}`)
-          .toEqual({ valid, status });
+      await redis.set(key, healthStatus, { expiration: { type: 'EX', value: 60 } });
+      const qr = await request.get(endpoint('E2E_AUTH_URL', '/api/v1/auth/qr/generate'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(qr.status(), 'Auth emitió un QR de acceso').toBe(200);
+      const { qrToken } = await qr.json();
+      const validation = await request.post(endpoint('E2E_GATEWAY_URL', '/api/v1/gate/validate'), {
+        data: { token: qrToken },
+      });
+      expect(validation.status()).toBe(200);
+      const result = await validation.json();
+      expect({ valid: result.valid, status: result.status }, `Validación para ${healthStatus}`)
+        .toEqual({ valid, status });
+      if (!valid) {
+        expect(result.message, 'El rechazo corresponde al estado de salud del usuario')
+          .not.toBe('Invalid or Expired Token');
       }
     } finally {
       if (previous === null || (ttl >= 0 && expiresAt <= Date.now())) {
@@ -144,4 +146,12 @@ test('gateway devuelve GREEN para ACTIVE y RED para SUSPECT', async ({ request }
   } finally {
     redis.destroy();
   }
+}
+
+test('gateway permite el acceso con un QR de una cuenta ACTIVE', async ({ request }) => {
+  await verifyQr(request, 'ACTIVE', 'GREEN', true);
+});
+
+test('gateway rechaza el acceso con un QR de una cuenta SUSPECT', async ({ request }) => {
+  await verifyQr(request, 'SUSPECT', 'RED', false);
 });

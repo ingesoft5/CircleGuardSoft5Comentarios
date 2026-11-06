@@ -62,6 +62,18 @@ mediante la red de Docker en cada host.
 | Stage | `circleguard-stage` | Salida `PublicDns` de stage. Registrar la URL HTTPS una vez configurados DNS y TLS. |
 | Prod | `circleguard-prod` | Salida `PublicDns` de prod. Registrar la URL HTTPS una vez configurados DNS y TLS. |
 
+Los tres stacks se aprovisionaron el 6 de noviembre de 2026 en la cuenta
+CircleGuard terminada en 9264, en Ohio. El README recoge los DNS de SSH.
+Para conectarse desde Windows como operador, usen la clave de ambientes
+`$env:USERPROFILE\.ssh\circleguard-env\id_ed25519` con el usuario `ubuntu`.
+La entrada al host se restringe a la IPv4 del operador y la de CI.
+Docker Compose se verificó por SSH en los tres hosts. Con PostgreSQL temporal
+aceptando conexiones en la IP privada de prod, una prueba desde dev agotó el
+tiempo de conexión tanto a la IP privada como al DNS público de prod por el
+puerto 5432. Se retiró la base de prueba al terminar.
+Al ejecutar otra vez el bootstrap, CloudFormation indicó que los tres stacks
+estaban al día y mantuvo las mismas instancias.
+
 Comprueben en cada host `sudo cloud-init status --wait` y
 `sudo docker compose version`. Guarden las salidas de dos ejecuciones con los
 mismos parámetros. Tras desplegar el Compose de HU-07, obtengan evidencia de
@@ -77,12 +89,20 @@ Configuren la llave SSH y verifiquen previamente la clave de cada host en el
 `circleGuardEnv('dev', 'ubuntu@HOST_DEV', 'ID_LLAVE_SSH')` entrega el archivo a
 `/opt/circleguard/.env` antes del despliegue. Repítanlo con el host y el ambiente
 correspondientes. El reemplazo es atómico y el archivo queda con permisos 0600.
+El instalador se probó en los tres hosts con archivos temporales y conservó su
+contenido y los permisos 0600. La VM de CI alcanza el puerto SSH de los tres
+ambientes. Para el despliegue queda registrar en Jenkins la llave de despliegue
+y los archivos definitivos que use el Compose de HU-07.
 
 ## HU-15 · Playwright en dev
 
 Usen un ambiente local o dev, una cuenta sintética exclusiva de la suite y
 los servicios ya desplegados. El cliente web debe apuntar a las API del
 ambiente. Para el cliente Expo local usen el puerto 8081, permitido por auth.
+Configuren el mismo `QR_SECRET` en auth y gateway dentro de ese ambiente para
+que la prueba compruebe el estado de salud con un token válido. En auth,
+`QR_EXPIRATION` se mide en milisegundos. Usen `QR_EXPIRATION=60000` en el
+ambiente de pruebas para una vigencia de 60 segundos.
 Para el cliente desplegado, coordinen con HU-07 el proxy del mismo origen
 o el origen HTTPS permitido por los servicios.
 
@@ -103,17 +123,22 @@ npm test
 ```
 
 La suite verifica login válido e inválido, envío de una respuesta real del
-cuestionario con confirmación y validación de un QR auténtico para `ACTIVE`
-y `SUSPECT`. Para la puerta se prepara temporalmente el estado de la cuenta
+cuestionario con confirmación y dos casos de QR auténtico, uno para `ACTIVE`
+y otro para `SUSPECT`. Para la puerta se prepara temporalmente el estado de la cuenta
 sintética en Redis. El QR se pide a auth y se valida con gateway. La
 comprobación de `SUSPECT` requiere la corrección de HU-12.
+En la ejecución local del 6 de noviembre de 2026 pasaron cuatro pruebas
+(ambos casos de login, el cuestionario y el QR de `ACTIVE`). El gateway
+devolvió `GREEN` para `SUSPECT`, cuyo resultado esperado es `RED`.
 
 En el pipeline, carguen `jenkins/` como Shared Library y llamen a
 `circleGuardE2E('circleguard-e2e-health')` después del despliegue y prueba de
-humo de dev y antes de promover a stage. El agente debe tener Node y las
-dependencias de sistema de Chromium, o usar la imagen Playwright que
-corresponda a la versión del lockfile. Configuren las URL y el túnel en el
-agente y el usuario de prueba como credencial **Username with password**.
+humo de dev y antes de promover a stage. La imagen de Jenkins instala las
+dependencias de sistema de Chromium. Al cambiar Playwright en `e2e/`,
+actualicen también `PLAYWRIGHT_VERSION` en el Dockerfile de Jenkins.
+Se verificó el arranque de Chromium como usuario Jenkins en EC2.
+Configuren las URL y el túnel en el agente y el usuario de prueba como
+credencial **Username with password**.
 El paso archiva `playwright-report/` también si falla una prueba. Dejen que
 el fallo detenga el pipeline y ejecuten una sola suite a la vez por cuenta
 sintética.
