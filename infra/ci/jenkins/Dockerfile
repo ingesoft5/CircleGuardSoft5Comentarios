@@ -14,6 +14,7 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 USER jenkins
 COPY --chown=jenkins:jenkins plugins.txt /usr/share/jenkins/ref/plugins.txt
+ENV JENKINS_UC_DOWNLOAD=https://mirror.twds.com.tw/jenkins
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 COPY --chown=jenkins:jenkins casc.yml /opt/jenkins/casc.yml
 
